@@ -62,7 +62,7 @@ local function handleRequestingEms()
         if IsControlJustPressed(0, 47) then
             TriggerServerEvent('cd_dispatch:AddNotification', {
                 job_table = { 'fire' },
-                coords = pos,
+                coords = GetEntityCoords(cache.ped),
                 title = 'Downed Individual',
                 message = 'Citizens reporting a downed individual.',
                 flash = 0,
