@@ -45,9 +45,9 @@
         "revive_player": "Revive a Player"
     },
     "mail": {
-        "sender": "Pillbox Hospital",
-        "subject": "Hospital Costs",
-        "message": "Dear %s %s, <br /><br />Hereby you received an email with the costs of the last hospital visit.<br />The final costs have become: <strong>$%s</strong><br /><br />We wish you a quick recovery!"
+        "sender": "San Andreas Medical Network",
+        "subject": "Medical Bill",
+        "message": "Dear %s %s, <br /><br />Thank you for choosing the San Andreas Medical Network.<br />Your final hospital bill is: <strong>$%s</strong><br /><br />We wish you a quick recovery!"
     },
     "menu": {
         "amb_vehicles": "Ambulance Vehicles",

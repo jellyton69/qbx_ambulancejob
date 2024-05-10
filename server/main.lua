@@ -1,4 +1,5 @@
 local sharedConfig = require 'config.shared'
+local serverConfig = require 'config.server'
 
 ---@alias source number
 
@@ -23,12 +24,7 @@ local function registerArmory()
 	end
 end
 
-local function registerStashes()
-    for _, stash in pairs(sharedConfig.locations.stash) do
-        exports.ox_inventory:RegisterStash(stash.name, stash.label, stash.slots, stash.weight, stash.owner, stash.groups, stash.location)
-    end
-end
-
+--[[
 RegisterNetEvent('hospital:server:ambulanceAlert', function(text)
 	if GetInvokingResource() then return end
 	local src = source
@@ -47,18 +43,28 @@ RegisterNetEvent('qbx_medical:server:onPlayerLaststand', function()
 	local src = source
 	alertAmbulance(src, locale('info.civ_down'))
 end)
+]]
 
 ---@param playerId number
 RegisterNetEvent('hospital:server:TreatWounds', function(playerId)
+	lib.print.debug('hospital:server:TreatWounds', playerId)
+
 	if GetInvokingResource() then return end
 	local src = source
 	local player = exports.qbx_core:GetPlayer(src)
 	local patient = exports.qbx_core:GetPlayer(playerId)
+
 	if player.PlayerData.job.type ~= 'ems' or not patient then return end
 
-	exports.ox_inventory:RemoveItem(src, 'bandage', 1)
-	TriggerClientEvent('hospital:client:HealInjuries', patient.PlayerData.source, 'full')
+	if not exports.ox_inventory:RemoveItem(src, 'bandage', 1) then
+		lib.print.warn("hospital:server:TreatWounds called by " .. src .. " but they didn't have a bandage.")
+		return
+	end
+	lib.callback.await('qbx_medical:client:heal', playerId, 'full')
 end)
+
+local reviveCost = sharedConfig.reviveCost
+local revivePayment = math.floor((reviveCost * 0.4) + 0.5)
 
 ---@param playerId number
 RegisterNetEvent('hospital:server:RevivePlayer', function(playerId)
@@ -67,6 +73,14 @@ RegisterNetEvent('hospital:server:RevivePlayer', function(playerId)
 	local patient = exports.qbx_core:GetPlayer(playerId)
 
 	if not patient then return end
+
+	if player.PlayerData.job.type == 'ems' then
+		patient.Functions.RemoveMoney("bank", reviveCost, "San Andreas Medical Network - Payment")
+		exports['qb-management']:AddMoney("fire", reviveCost - revivePayment)
+		player.Functions.AddMoney("bank", revivePayment, "San Andreas Medical Network - Pay")
+
+		TriggerClientEvent('hospital:client:SendBillEmail', patient.PlayerData.source, reviveCost)
+	end
 
 	exports.ox_inventory:RemoveItem(player.PlayerData.source, 'firstaid', 1)
 	TriggerClientEvent('qbx_medical:client:playerRevived', patient.PlayerData.source)
@@ -89,9 +103,12 @@ RegisterNetEvent('hospital:server:UseFirstAid', function(targetId)
 end)
 
 lib.callback.register('qbx_ambulancejob:server:getNumDoctors', function()
-	return exports.qbx_core:GetDutyCountType('ems')
+	local count = exports.qbx_core:GetDutyCountType('ems')
+	lib.print.debug("Returning 'doctor' count", count)
+	return count
 end)
 
+--[[
 lib.addCommand('911e', {
     help = locale('info.ems_report'),
     params = {
@@ -108,6 +125,7 @@ lib.addCommand('911e', {
 		end
 	end
 end)
+]]
 
 ---@param src number
 ---@param event string
@@ -122,19 +140,19 @@ local function triggerEventOnEmsPlayer(src, event)
 end
 
 lib.addCommand('status', {
-    help = locale('info.check_health'),
+	help = locale('info.check_health'),
 }, function(source)
 	triggerEventOnEmsPlayer(source, 'hospital:client:CheckStatus')
 end)
 
 lib.addCommand('heal', {
-    help = locale('info.heal_player'),
+	help = locale('info.heal_player'),
 }, function(source)
 	triggerEventOnEmsPlayer(source, 'hospital:client:TreatWounds')
 end)
 
 lib.addCommand('revivep', {
-    help = locale('info.revive_player'),
+	help = locale('info.revive_player'),
 }, function(source)
 	triggerEventOnEmsPlayer(source, 'hospital:client:RevivePlayer')
 end)
@@ -171,15 +189,116 @@ exports.qbx_core:CreateUseableItem('firstaid', function(source, item)
 	triggerItemEventOnPlayer(source, item, 'hospital:client:UseFirstAid')
 end)
 
+--[[
 RegisterNetEvent('qbx_medical:server:playerDied', function()
 	if GetInvokingResource() then return end
 	local src = source
 	alertAmbulance(src, locale('info.civ_died'))
 end)
+]]
 
 AddEventHandler('onResourceStart', function(resource)
-    if resource ~= GetCurrentResourceName() then return end
+	if resource ~= GetCurrentResourceName() then return end
 
-    registerArmory()
-    registerStashes()
+	registerArmory()
+end)
+
+RegisterServerEvent('QBCore:Everfall:EMS:Timeclock', function(Player, ClockingIn)
+	local source = Player.PlayerData.source
+	local department = "SAFD"
+	local data = {
+		Webhook = serverConfig.logWebhook,
+		Icon = "https://files.jellyton.me/ShareX/2023/04/LSCFD-GTAV-Logo.png"
+	}
+
+	local message
+	if ClockingIn then
+		message = ":inbox_tray:  **" ..
+			Player.PlayerData.charinfo.firstname ..
+			" " ..
+			Player.PlayerData.charinfo.lastname ..
+			" (<@" .. exports.ef_lib:GetDiscordID(source) .. ">)** has clocked in for duty."
+	else
+		message = ":outbox_tray:  **" ..
+			Player.PlayerData.charinfo.firstname ..
+			" " ..
+			Player.PlayerData.charinfo.lastname ..
+			" (<@" .. exports.ef_lib:GetDiscordID(source) .. ">)** has clocked out."
+	end
+
+	local fields
+	if ClockingIn then
+		fields = {
+			{
+				name = "CitizenID",
+				value = Player.PlayerData.citizenid,
+				inline = true,
+			},
+			{
+				name = "Grade",
+				value = Player.PlayerData.job.grade.name,
+				inline = true,
+			},
+		}
+	else
+		fields = {
+			{
+				name = "CitizenID",
+				value = Player.PlayerData.citizenid,
+				inline = true,
+			},
+			{
+				name = "Time Patrolled",
+				value = "Unknown",
+				inline = true,
+			},
+		}
+	end
+
+	local embedData = {
+		{
+			['author'] = {
+				['name'] = GetPlayerName(source),
+				['icon_url'] = exports.ef_lib:GetAvatar(source),
+			},
+			['title'] = (ClockingIn and "Clock In") or "Clock Out",
+			['color'] = (ClockingIn and 3858002) or 16068139,
+			['description'] = message,
+			['fields'] = fields,
+			['thumbnail'] = {
+				['url'] = data.Icon
+			}
+		}
+	}
+
+	PerformHttpRequest(data.Webhook, function()
+	end, 'POST', json.encode({
+		username = department .. ' Timeclock',
+		avatar_url = data.Icon,
+		embeds = embedData
+	}), { ['Content-Type'] = 'application/json' })
+end)
+
+AddEventHandler('playerDropped', function()
+	local src = source
+	local Player = exports.qbx_core:GetPlayer(src)
+
+	if Player and (Player.PlayerData.job.name == "fire" and Player.PlayerData.job.onduty) then
+		TriggerEvent('QBCore:Everfall:EMS:Timeclock', Player, false)
+	end
+end)
+
+RegisterNetEvent("QBCore:Everfall:EMSClockIn", function(_source)
+	local src = source or _source
+	local Player = exports.qbx_core:GetPlayer(src)
+
+	TriggerEvent('QBCore:Everfall:EMS:Timeclock', Player, true)
+end)
+
+RegisterNetEvent("QBCore:Everfall:EMSClockOut", function(_source)
+	local src = source or _source
+
+	local Player = exports.qbx_core:GetPlayer(src)
+
+	TriggerEvent('QBCore:Everfall:EMS:Timeclock', Player, false)
 end)

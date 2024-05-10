@@ -1,58 +1,46 @@
 local config = require 'config.client'
 local sharedConfig = require 'config.shared'
-local checkVehicle = false
-local WEAPONS = exports.qbx_core:GetWeapons()
 
----Configures and spawns a vehicle and teleports player to the driver seat.
----@param data { vehicleName: string, coords: vector4}
-local function takeOutVehicle(data)
-    local netId = lib.callback.await('qbx_ambulancejob:server:spawnVehicle', false, data.vehicleName, data.coords)
+JobCached = QBX.PlayerData?.job
 
-    local veh = lib.waitFor(function()
-        if NetworkDoesEntityExistWithNetworkId(netId) then
-            return NetToVeh(netId)
+-- Events
+RegisterNetEvent('QBCore:Client:OnJobUpdate', function(job)
+    if job.type == 'ems' and job.onduty then
+        TriggerServerEvent('QBCore:Everfall:EMSClockIn')
+    elseif QBX.PlayerData.job.type == 'ems' and job.type ~= 'ems' then
+        TriggerServerEvent('QBCore:Everfall:EMSClockOut')
+    end
+
+    JobCached = job
+end)
+
+RegisterNetEvent('QBCore:Client:SetDuty', function(duty)
+    if QBX.PlayerData.job.type == 'ems' then
+        if duty then
+            TriggerServerEvent('QBCore:Everfall:EMSClockIn')
+        else
+            TriggerServerEvent('QBCore:Everfall:EMSClockOut')
         end
-    end)
-
-    SetVehicleEngineOn(veh, true, true, true)
-
-    local settings = config.vehicleSettings[data.vehicleName]
-    if not settings then return end
-
-    if settings.extras then
-        qbx.setVehicleExtras(veh, settings.extras)
     end
 
-    if settings.livery then
-        SetVehicleLivery(veh, settings.livery)
-    end
-end
+    JobCached.onduty = duty
+end)
 
----Show the garage spawn menu
----@param vehicles AuthorizedVehicles
----@param coords vector4
-local function showGarageMenu(vehicles, coords)
-    local authorizedVehicles = vehicles[QBX.PlayerData.job.grade.level]
-    local optionsMenu = {}
-    for veh, label in pairs(authorizedVehicles) do
-        optionsMenu[#optionsMenu + 1] = {
-            title = label,
-            onSelect = takeOutVehicle,
-            args = {
-                vehicleName = veh,
-                coords = coords,
-            }
-        }
+RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
+    if QBX.PlayerData.job.type == 'ems' and QBX.PlayerData.job.onduty then
+        TriggerServerEvent('QBCore:Everfall:EMSClockIn')
     end
 
-    lib.registerContext({
-        id = 'ambulance_garage_context_menu',
-        title = locale('menu.amb_vehicles'),
-        options = optionsMenu
-    })
+    JobCached = QBX.PlayerData.job
+end)
 
-    lib.showContext('ambulance_garage_context_menu')
-end
+RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
+    if JobCached.type == 'ems' and JobCached.onduty then
+        TriggerServerEvent('QBCore:Everfall:EMSClockOut')
+    end
+
+    JobCached = nil
+end)
 
 ---Show patient's treatment menu.
 ---@param status string[]
@@ -91,6 +79,7 @@ RegisterNetEvent('hospital:client:CheckStatus', function()
         return
     end
 
+    --[[
     for hash in pairs(status.damageCauses) do
         TriggerEvent('chat:addMessage', {
             color = { 255, 0, 0 },
@@ -98,6 +87,7 @@ RegisterNetEvent('hospital:client:CheckStatus', function()
             args = { locale('info.status'), WEAPONS[hash].damagereason }
         })
     end
+    ]]
 
     if status.bleedLevel > 0 then
         TriggerEvent('chat:addMessage', {
@@ -126,22 +116,22 @@ RegisterNetEvent('hospital:client:RevivePlayer', function()
     end
 
     if lib.progressCircle({
-        duration = 5000,
-        position = 'bottom',
-        label = locale('progress.revive'),
-        useWhileDead = false,
-        canCancel = true,
-        disable = {
-            move = false,
-            car = false,
-            combat = true,
-            mouse = false,
-        },
-        anim = {
-            dict = HealAnimDict,
-            clip = HealAnim,
-        },
-    })
+            duration = 5000,
+            position = 'bottom',
+            label = locale('progress.revive'),
+            useWhileDead = false,
+            canCancel = true,
+            disable = {
+                move = false,
+                car = false,
+                combat = true,
+                mouse = false,
+            },
+            anim = {
+                dict = HealAnimDict,
+                clip = HealAnim,
+            },
+        })
     then
         StopAnimTask(cache.ped, HealAnimDict, 'exit', 1.0)
         exports.qbx_core:Notify(locale('success.revived'), 'success')
@@ -168,22 +158,22 @@ RegisterNetEvent('hospital:client:TreatWounds', function()
     end
 
     if lib.progressCircle({
-        duration = 5000,
-        position = 'bottom',
-        label = locale('progress.healing'),
-        useWhileDead = false,
-        canCancel = true,
-        disable = {
-            move = false,
-            car = false,
-            combat = true,
-            mouse = false,
-        },
-        anim = {
-            dict = HealAnimDict,
-            clip = HealAnim,
-        },
-    })
+            duration = 5000,
+            position = 'bottom',
+            label = locale('progress.healing'),
+            useWhileDead = false,
+            canCancel = true,
+            disable = {
+                move = false,
+                car = false,
+                combat = true,
+                mouse = false,
+            },
+            anim = {
+                dict = HealAnimDict,
+                clip = HealAnim,
+            },
+        })
     then
         StopAnimTask(cache.ped, HealAnimDict, 'exit', 1.0)
         exports.qbx_core:Notify(locale('success.helped_player'), 'success')
@@ -194,12 +184,6 @@ RegisterNetEvent('hospital:client:TreatWounds', function()
     end
 end)
 
----@param stashNumber integer id of stash to open
-local function openStash(stashNumber)
-    if not QBX.PlayerData.job.onduty then return end
-    exports.ox_inventory:openInventory('stash', sharedConfig.locations.stash[stashNumber].name)
-end
-
 ---Opens the hospital armory.
 ---@param armoryId integer id of armory to open
 ---@param stashId integer id of armory to open
@@ -208,79 +192,11 @@ local function openArmory(armoryId, stashId)
     exports.ox_inventory:openInventory('shop', { type = sharedConfig.locations.armory[armoryId].shopType, id = stashId })
 end
 
----Teleports the player with a fade in/out effect
----@param coords vector3 | vector4
-local function teleportPlayerWithFade(coords)
-    DoScreenFadeOut(500)
-    while not IsScreenFadedOut() do
-        Wait(10)
-    end
-
-    SetEntityCoords(cache.ped, coords.x, coords.y, coords.z, false, false, false, false)
-    if coords.w then
-        SetEntityHeading(cache.ped, coords.w)
-    end
-
-    Wait(100)
-
-    DoScreenFadeIn(1000)
-end
-
----Teleports the player to main elevator
-local function teleportToMainElevator()
-    teleportPlayerWithFade(sharedConfig.locations.main[1])
-end
-
----Teleports the player to roof elevator
-local function teleportToRoofElevator()
-    teleportPlayerWithFade(sharedConfig.locations.roof[1])
-end
-
 ---Toggles the on duty status of the player.
 local function toggleDuty()
     TriggerServerEvent('QBCore:ToggleDuty')
     TriggerServerEvent('police:server:UpdateBlips')
 end
-
----Creates a zone that lets players store and retrieve job vehicles
----@param vehicles AuthorizedVehicles
----@param coords vector4
-local function createGarage(vehicles, coords)
-    lib.zones.box({
-        coords = coords.xyz,
-        size = vec3(5, 5, 2),
-        rotation = coords.w,
-        debug = config.debugPoly,
-        onEnter = function()
-            if QBX.PlayerData.job.type == 'ems' and QBX.PlayerData.job.onduty then
-                lib.showTextUI(locale('text.veh_button'))
-            end
-        end,
-        onExit = function()
-                        lib.hideTextUI()
-        end,
-        inside = function()
-            if QBX.PlayerData.job.type == 'ems' and QBX.PlayerData.job.onduty and IsControlJustPressed(0, 38) then
-                if cache.vehicle then
-                    DeleteEntity(cache.vehicle)
-            else
-                showGarageMenu(vehicles, coords)
-                end
-            end
-        end,
-    })
-end
-
----Creates air and land garages to spawn vehicles at for EMS personnel
-CreateThread(function()
-    for _, coords in pairs(sharedConfig.locations.vehicle) do
-        createGarage(config.authorizedVehicles, coords)
-    end
-
-    for _, coords in pairs(sharedConfig.locations.helicopter) do
-        createGarage(config.authorizedHelicopters, coords)
-    end
-end)
 
 ---Sets up duty toggle, stash, armory, and elevator interactions using either target or zones.
 if config.useTarget then
@@ -297,27 +213,6 @@ if config.useTarget then
                         icon = 'fa fa-clipboard',
                         label = locale('text.duty'),
                         onSelect = toggleDuty,
-                        distance = 2,
-                        groups = 'ambulance',
-                    }
-                }
-            })
-        end
-
-        for i = 1, #sharedConfig.locations.stash do
-            exports.ox_target:addBoxZone({
-                name = 'stash' .. i,
-                coords = sharedConfig.locations.stash[i].location,
-                size = vec3(1, 1, 2),
-                rotation = -20,
-                debug = config.debugPoly,
-                options = {
-                    {
-                        icon = 'fa fa-clipboard',
-                        label = locale('text.pstash'),
-                        onSelect = function()
-                            openStash(i)
-                        end,
                         distance = 2,
                         groups = 'ambulance',
                     }
@@ -347,40 +242,6 @@ if config.useTarget then
                 })
             end
         end
-
-        exports.ox_target:addBoxZone({
-            name = 'roof1',
-            coords = sharedConfig.locations.roof[1],
-            size = vec3(1, 2, 2),
-            rotation = -20,
-            debug = config.debugPoly,
-            options = {
-                {
-                    icon = 'fas fa-hand-point-down',
-                    label = locale('text.el_main'),
-                    onSelect = teleportToMainElevator,
-                    distance = 1.5,
-                    groups = 'ambulance',
-                }
-            }
-        })
-
-        exports.ox_target:addBoxZone({
-            name = 'main1',
-            coords = sharedConfig.locations.main[1],
-            size = vec3(2, 1, 2),
-            rotation = -20,
-            debug = config.debugPoly,
-            options = {
-                {
-                    icon = 'fas fa-hand-point-up',
-                    label = locale('text.el_roof'),
-                    onSelect = teleportToRoofElevator,
-                    distance = 1.5,
-                    groups = 'ambulance',
-                }
-            }
-        })
     end)
 else
     CreateThread(function()
@@ -391,7 +252,8 @@ else
                 rotation = -20,
                 debug = config.debugPoly,
                 onEnter = function()
-                    local label = QBX.PlayerData.job.onduty and locale('text.onduty_button') or locale('text.offduty_button')
+                    local label = QBX.PlayerData.job.onduty and locale('text.onduty_button') or
+                        locale('text.offduty_button')
                     lib.showTextUI(label)
                 end,
                 onExit = function()
@@ -399,28 +261,6 @@ else
                 end,
                 inside = function()
                     OnKeyPress(toggleDuty)
-                end,
-            })
-        end
-
-        for i = 1, #sharedConfig.locations.stash do
-            lib.zones.box({
-                coords = sharedConfig.locations.stash[i].location,
-                size = vec3(1, 1, 2),
-                rotation = -20,
-                debug = config.debugPoly,
-                onEnter = function()
-                    if QBX.PlayerData.job.onduty then
-                        lib.showTextUI(locale('text.pstash_button'))
-                    end
-                end,
-                onExit = function()
-                    lib.hideTextUI()
-                end,
-                inside = function()
-                    OnKeyPress(function()
-                        openStash(i)
-                    end)
                 end,
             })
         end
@@ -448,39 +288,5 @@ else
                 })
             end
         end
-
-        lib.zones.box({
-            coords = sharedConfig.locations.roof[1],
-            size = vec3(1, 1, 2),
-            rotation = -20,
-            debug = config.debugPoly,
-            onEnter = function()
-                local label = QBX.PlayerData.job.onduty and locale('text.elevator_main') or locale('error.not_ems')
-                lib.showTextUI(label)
-            end,
-            onExit = function()
-                lib.hideTextUI()
-            end,
-            inside = function()
-                OnKeyPress(teleportToMainElevator)
-            end,
-        })
-
-        lib.zones.box({
-            coords = sharedConfig.locations.main[1],
-            size = vec3(1, 1, 2),
-            rotation = -20,
-            debug = config.debugPoly,
-            onEnter = function()
-                local label = QBX.PlayerData.job.onduty and locale('text.elevator_roof') or locale('error.not_ems')
-                lib.showTextUI(label)
-            end,
-            onExit = function()
-                lib.hideTextUI()
-            end,
-            inside = function()
-                OnKeyPress(teleportToRoofElevator)
-            end,
-        })
     end)
 end

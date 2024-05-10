@@ -32,14 +32,33 @@ end)
 ---@param src number
 local function billPlayer(src)
 	local player = exports.qbx_core:GetPlayer(src)
-	player.Functions.RemoveMoney('bank', sharedConfig.checkInCost, 'respawned-at-hospital')
-	config.depositSociety('ambulance', sharedConfig.checkInCost)
+	player.Functions.RemoveMoney('bank', sharedConfig.checkInCost, 'San Andreas Medical Network: Medical Bills')
+	config.depositSociety('fire', sharedConfig.checkInCost)
 	TriggerClientEvent('hospital:client:SendBillEmail', src, sharedConfig.checkInCost)
 end
 
 RegisterNetEvent('qbx_ambulancejob:server:playerEnteredBed', function(hospitalName, bedIndex)
 	if GetInvokingResource() then return end
 	local src = source
+
+	local playerState = Player(src).state
+	if playerState.isCarrying or playerState.isEscorting then
+		local target = playerState.isCarrying or playerState.isEscorting
+		local targetState = Player(target)?.state
+
+		if targetState then
+			if playerState.isCarrying then
+				playerState.isCarrying = false
+				targetState.isCarried = false
+			end
+
+			if playerState.isEscorting then
+				playerState.isEscorting = false
+				targetState.isEscorted = false
+			end
+		end
+	end
+
 	billPlayer(src)
 	hospitalBedsTaken[hospitalName][bedIndex] = true
 end)
@@ -50,33 +69,35 @@ RegisterNetEvent('qbx_ambulancejob:server:playerLeftBed', function(hospitalName,
 end)
 
 ---@param playerId number
+---@param hospitalName string
+---@param bedIndex number
 RegisterNetEvent('hospital:server:putPlayerInBed', function(playerId, hospitalName, bedIndex)
 	if GetInvokingResource() then return end
+	local src = source
+
+	local playerState = Player(src).state
+	if playerState.isCarrying or playerState.isEscorting then
+		local target = playerState.isCarrying or playerState.isEscorting
+		local targetState = Player(target)?.state
+
+		if targetState then
+			if playerState.isCarrying then
+				playerState.isCarrying = false
+				targetState.isCarried = false
+			end
+
+			if playerState.isEscorting then
+				playerState.isEscorting = false
+				targetState.isEscorted = false
+			end
+		end
+	end
+
 	TriggerClientEvent('qbx_ambulancejob:client:putPlayerInBed', playerId, hospitalName, bedIndex)
 end)
 
 lib.callback.register('qbx_ambulancejob:server:isBedTaken', function(_, hospitalName, bedIndex)
 	return hospitalBedsTaken[hospitalName][bedIndex]
-end)
-
----@param src number
-local function wipeInventory(src)
-	exports.ox_inventory:ClearInventory(src)
-	exports.qbx_core:Notify(src, locale('error.possessions_taken'), 'error')
-end
-
-lib.callback.register('qbx_ambulancejob:server:spawnVehicle', function(source, vehicleName, vehicleCoords)
-	local netId = qbx.spawnVehicle({ spawnSource = vehicleCoords or source, model = vehicleName, warp = source })
-
-	local veh = NetworkGetEntityFromNetworkId(netId)
-
-	local vehType = GetVehicleType(veh)
-	local platePrefix = (vehType == 'heli') and locale('info.heli_plate') or locale('info.amb_plate')
-	local plate = platePrefix .. tostring(math.random(1000, 9999))
-
-	SetVehicleNumberPlateText(veh, plate)
-	TriggerClientEvent('vehiclekeys:client:SetOwner', source, plate)
-	return netId
 end)
 
 local function sendDoctorAlert()
@@ -112,13 +133,32 @@ lib.callback.register('qbx_ambulancejob:server:canCheckIn', canCheckIn)
 ---@param src number the player doing the checking in
 ---@param patientSrc number the player being checked in
 ---@param hospitalName string name of the hospital matching the config where player should be placed
+---@return boolean
 local function checkIn(src, patientSrc, hospitalName)
-	if src == patientSrc and not canCheckIn(patientSrc, hospitalName) then return false end
+	if not canCheckIn(patientSrc, hospitalName) then return false end
 
 	local bedIndex = getOpenBed(hospitalName)
 	if not bedIndex then
 		exports.qbx_core:Notify(src, locale('error.beds_taken'), 'error')
 		return false
+	end
+
+	local playerState = Player(src).state
+	if playerState.isCarrying or playerState.isEscorting then
+		local target = playerState.isCarrying or playerState.isEscorting
+		local targetState = Player(target)?.state
+
+		if targetState then
+			if playerState.isCarrying then
+				playerState.isCarrying = false
+				targetState.isCarried = false
+			end
+
+			if playerState.isEscorting then
+				playerState.isEscorting = false
+				targetState.isEscorted = false
+			end
+		end
 	end
 
 	TriggerClientEvent('qbx_ambulancejob:client:checkedIn', patientSrc, hospitalName, bedIndex)
@@ -154,10 +194,6 @@ local function respawn(src)
 		return
 	end
 	TriggerClientEvent('qbx_ambulancejob:client:checkedIn', src, closestHospital, bedIndex)
-
-	if config.wipeInvOnRespawn then
-		wipeInventory(src)
-	end
 end
 
 AddEventHandler('qbx_medical:server:playerRespawned', respawn)

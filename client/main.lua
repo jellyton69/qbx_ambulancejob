@@ -51,6 +51,7 @@ end)
 ---Revives player, healing all injuries
 ---Intended to be called from client or server.
 RegisterNetEvent('hospital:client:Revive', function()
+    lib.print.debug('hospital:client:Revive', 'IsInHospitalBed', IsInHospitalBed)
     if IsInHospitalBed then
         lib.requestAnimDict(InBedDict)
         TaskPlayAnim(cache.ped, InBedDict, InBedAnim, 8.0, 1.0, -1, 1, 0, false, false, false)
@@ -89,8 +90,8 @@ CreateThread(function()
         SetBlipAsShortRange(blip, true)
         SetBlipScale(blip, 0.8)
         SetBlipColour(blip, 25)
-        BeginTextCommandSetBlipName('STRING')
-        AddTextComponentString(station.label)
+        AddTextEntry(station.label, station.label)
+        BeginTextCommandSetBlipName(station.label)
         EndTextCommandSetBlipName(blip)
     end
 end)
