@@ -13,6 +13,11 @@ lib.callback.register('hospital:client:UseFirstAid', function()
         return
     end
 
+    if IsPedGettingIntoAVehicle(ped) then
+        exports.qbx_core:Notify("You cannot do this right now.", 'error')
+        return
+    end
+
     local player = GetClosestPlayer()
     if player then
         local playerId = GetPlayerServerId(player)
@@ -28,22 +33,22 @@ end)
 RegisterNetEvent('hospital:client:HelpPerson', function(targetId)
     if GetInvokingResource() then return end
     if lib.progressCircle({
-        duration = math.random(30000, 60000),
-        position = 'bottom',
-        label = locale('progress.revive'),
-        useWhileDead = false,
-        canCancel = true,
-        disable = {
-            move = false,
-            car = false,
-            combat = true,
-            mouse = false,
-        },
-        anim = {
-            dict = HealAnimDict,
-            clip = HealAnim,
-        },
-    })
+            duration = math.random(30000, 60000),
+            position = 'bottom',
+            label = locale('progress.revive'),
+            useWhileDead = false,
+            canCancel = true,
+            disable = {
+                move = false,
+                car = false,
+                combat = true,
+                mouse = false,
+            },
+            anim = {
+                dict = HealAnimDict,
+                clip = HealAnim,
+            },
+        })
     then
         ClearPedTasks(cache.ped)
         exports.qbx_core:Notify(locale('success.revived'), 'success')
