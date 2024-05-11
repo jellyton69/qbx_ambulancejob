@@ -167,7 +167,7 @@ local function triggerItemEventOnPlayer(src, item, event)
 
 	if exports.ox_inventory:Search(src, 'count', item.name) == 0 then return end
 
-	if player.PlayerData.metadata.isdead or player.PlayerData.metadata.inlaststand or Player(target).state.isCuffed then
+	if player.PlayerData.metadata.isdead or player.PlayerData.metadata.inlaststand or Player(src).state.isCuffed then
 		exports.qbx_core:Notify(src, "You cannot do this right now.", 'error')
 		return
 	end
