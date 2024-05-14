@@ -76,7 +76,7 @@ RegisterNetEvent('hospital:server:RevivePlayer', function(playerId)
 
 	if player.PlayerData.job.type == 'ems' then
 		patient.Functions.RemoveMoney("bank", reviveCost, "San Andreas Medical Network - Payment")
-		exports['qb-management']:AddMoney("fire", reviveCost - revivePayment)
+		exports['fd_banking']:AddMoney("fire", reviveCost - revivePayment)
 		player.Functions.AddMoney("bank", revivePayment, "San Andreas Medical Network - Pay")
 
 		TriggerClientEvent('hospital:client:SendBillEmail', patient.PlayerData.source, reviveCost)
