@@ -52,7 +52,7 @@ local function handleDead(ped)
         displayRespawnText()
     end
 
-    playDeadAnimation(ped)
+    --playDeadAnimation(ped)
 end
 
 ---Player is able to send a notification to EMS there are any on duty
@@ -103,8 +103,6 @@ local function handleLastStand()
         qbx.drawText2d({ text = locale('info.bleed_out_help', math.ceil(laststandTime)), coords = textLocation, scale = 0.6 })
         handleRequestingEms()
     end
-
-    exports.qbx_medical:playLastStandAnimationDeprecated()
 end
 
 ---Set dead and last stand states.
