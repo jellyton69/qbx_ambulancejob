@@ -3,22 +3,22 @@ local painkillerAmount = 0
 
 lib.callback.register('hospital:client:UseIfaks', function()
     if lib.progressCircle({
-        duration = 3000,
-        position = 'bottom',
-        label = locale('progress.ifaks'),
-        useWhileDead = false,
-        canCancel = true,
-        disable = {
-            move = false,
-            car = false,
-            combat = true,
-            mouse = false,
-        },
-        anim = {
-            dict = 'mp_suicide',
-            clip = 'pill',
-        },
-    })
+            duration = 3000,
+            position = 'bottom',
+            label = locale('progress.ifaks'),
+            useWhileDead = false,
+            canCancel = true,
+            disable = {
+                move = false,
+                car = false,
+                combat = true,
+                mouse = false,
+            },
+            anim = {
+                dict = 'mp_suicide',
+                clip = 'pill',
+            },
+        })
     then
         StopAnimTask(cache.ped, 'mp_suicide', 'pill', 1.0)
         TriggerServerEvent('hud:server:RelieveStress', math.random(12, 24))
@@ -41,24 +41,25 @@ end)
 
 lib.callback.register('hospital:client:UseBandage', function()
     if lib.progressCircle({
-        duration = 4000,
-        position = 'bottom',
-        label = locale('progress.bandage'),
-        useWhileDead = false,
-        canCancel = true,
-        disable = {
-            move = false,
-            car = false,
-            combat = true,
-            mouse = false,
-        },
-        anim = {
-            dict = 'mp_suicide',
-            clip = 'pill',
-        },
-    })
+            duration = 4000,
+            position = 'bottom',
+            label = locale('progress.bandage'),
+            useWhileDead = false,
+            canCancel = true,
+            disable = {
+                move = false,
+                car = false,
+                combat = true,
+                mouse = false,
+            },
+            anim = {
+                dict = 'missmic4',
+                clip = 'michael_tux_fidget',
+            },
+        })
     then
-        StopAnimTask(cache.ped, 'anim@amb@business@weed@weed_inspecting_high_dry@', 'weed_inspecting_high_base_inspector', 1.0)
+        StopAnimTask(cache.ped, 'anim@amb@business@weed@weed_inspecting_high_dry@', 'weed_inspecting_high_base_inspector',
+            1.0)
         SetEntityHealth(cache.ped, GetEntityHealth(cache.ped) + 10)
         if math.random(1, 100) < 50 then
             exports.qbx_medical:removeBleed(1)
@@ -68,7 +69,8 @@ lib.callback.register('hospital:client:UseBandage', function()
         end
         return true
     else
-        StopAnimTask(cache.ped, 'anim@amb@business@weed@weed_inspecting_high_dry@', 'weed_inspecting_high_base_inspector', 1.0)
+        StopAnimTask(cache.ped, 'anim@amb@business@weed@weed_inspecting_high_dry@', 'weed_inspecting_high_base_inspector',
+            1.0)
         exports.qbx_core:Notify(locale('error.canceled'), 'error')
         return false
     end
@@ -76,22 +78,22 @@ end)
 
 lib.callback.register('hospital:client:UsePainkillers', function()
     if lib.progressCircle({
-        duration = 3000,
-        position = 'bottom',
-        label = locale('progress.painkillers'),
-        useWhileDead = false,
-        canCancel = true,
-        disable = {
-            move = false,
-            car = false,
-            combat = true,
-            mouse = false,
-        },
-        anim = {
-            dict = 'mp_suicide',
-            clip = 'pill',
-        },
-    })
+            duration = 3000,
+            position = 'bottom',
+            label = locale('progress.painkillers'),
+            useWhileDead = false,
+            canCancel = true,
+            disable = {
+                move = false,
+                car = false,
+                combat = true,
+                mouse = false,
+            },
+            anim = {
+                dict = 'mp_suicide',
+                clip = 'pill',
+            },
+        })
     then
         StopAnimTask(cache.ped, 'mp_suicide', 'pill', 1.0)
         OnPainKillers = true
