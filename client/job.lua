@@ -101,9 +101,10 @@ RegisterNetEvent('hospital:client:CheckStatus', function()
 end)
 
 
-local reviveDuration = sharedConfig.reviveDuration
+local reviveDuration = config.reviveDuration
 ---Get the length of time it takes to revive someone from the config.
 local function getReviveDur()
+	lib.print.error("getReviveDur called")
 	local duration = reviveDuration.default
 	if QBX.PlayerData.job.type == 'ems' and job.onduty then -- If you are an On Duty EMS
 		local jobGrade = QBX.PlayerData.job.grade.level -- Get the number associated with your jobcode
@@ -112,6 +113,7 @@ local function getReviveDur()
 		end
 	end
 	
+	lib.print.error("reviveDur: " .. duration)
 	return duration
 end
 

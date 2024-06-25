@@ -106,21 +106,5 @@ return {
             { label = "Medical Center", coords = vector3(361.88, -1410.51, 32.52) }, -- Central LS
         }
 		
-    },
-    reviveDuration = { -- Correspond job grade numbers to their Duration of time it takes to revive someone
-		default = 5000
-		[0] = 4500, --Candidate
-		[1] = 4000, --Firefighter 1
-		[2] = 3500, --Firefighter 2
-		[3] = 3000, --Firefighter 3
-		[4] = 2000, --Engineer
-		[5] = 1750, --Paramedic
-		[6] = 1500, --Lieutenant
-		[7] = 1250, --Captain
-		[8] = 750,  --Battalion Chief
-		[9] = 750,  --Deputy District Chief
-		[10] = 750, --District Chief
-		[11] = 750, --High Command
-		[12] = 750, --Commissioner
-	},        
+    },  
 }
