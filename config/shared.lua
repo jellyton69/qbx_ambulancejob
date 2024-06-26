@@ -105,6 +105,5 @@ return {
             { label = "Medical Center", coords = vector3(-447.11, -341.41, 34.5) },  -- Mount Zonah
             { label = "Medical Center", coords = vector3(361.88, -1410.51, 32.52) }, -- Central LS
         }
-		
-    },  
+    },
 }
