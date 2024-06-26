@@ -100,24 +100,6 @@ RegisterNetEvent('hospital:client:CheckStatus', function()
     showTreatmentMenu(status.injuries)
 end)
 
-
-local reviveDuration = config.reviveDuration
----Get the length of time it takes to revive someone from the config.
-local function getReviveDur()
-	lib.print.error("getReviveDur called")
-	local duration = reviveDuration.default
-	if QBX.PlayerData.job.type == 'ems' and job.onduty then -- If you are an On Duty EMS
-		local jobGrade = QBX.PlayerData.job.grade.level -- Get the number associated with your jobcode
-		if reviveDuration[jobGrade] then -- if your number is inside the config
-			duration = reviveDuration[jobGrade] -- assign the value
-		end
-	end
-	
-	lib.print.error("reviveDur: " .. duration)
-	return duration
-end
-
-
 ---Use first aid on nearest player to revive them.
 ---Intended to be invoked by client or server.
 RegisterNetEvent('hospital:client:RevivePlayer', function()
@@ -126,8 +108,7 @@ RegisterNetEvent('hospital:client:RevivePlayer', function()
         exports.qbx_core:Notify(locale('error.no_firstaid'), 'error')
         return
     end
-	
-	local reviveSpeed = getReviveDur()
+
     local player = GetClosestPlayer()
     if not player then
         exports.qbx_core:Notify(locale('error.no_player'), 'error')
@@ -135,7 +116,7 @@ RegisterNetEvent('hospital:client:RevivePlayer', function()
     end
 
     if lib.progressCircle({
-            duration = reviveSpeed,
+            duration = 5000,
             position = 'bottom',
             label = locale('progress.revive'),
             useWhileDead = false,
