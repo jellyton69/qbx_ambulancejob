@@ -1,8 +1,8 @@
---local GovernmentData = exports.ef_nexus:GetGovernmentData("EFEmergency")
+local GovernmentData = exports.ef_nexus:GetGovernmentData("EFEmergency")
 
 return {
-    reviveCost = 10, --GovernmentData.ReviveCost,        -- Price patient has to pay when they're revived
-    checkInCost = 20, --GovernmentData.HospitalBillCost, -- Price for using the hospital check-in system
+    reviveCost = GovernmentData.ReviveCost,        -- Price patient has to pay when they're revived
+    checkInCost = GovernmentData.HospitalBillCost, -- Price for using the hospital check-in system
     minForCheckIn = 20,                            -- Minimum number of people with the ambulance job to prevent the check-in system from being used
 
     locations = {                                  -- Various interaction points
